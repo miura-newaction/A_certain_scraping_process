@@ -5,14 +5,21 @@ end
 start_time = Time.now
 n = 100000
 sq(n)
+
 puts "_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/"
 puts start_time
 puts "_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/"
+
+# 使用するgem
 require 'mechanize'
 require 'nokogiri'
 require 'dotenv'
 require 'pry'
+
+# ENV読み込み
 Dotenv.load
+
+# スクレイピングgem「Mechanize」初期化
 agent = Mechanize.new do |a|
   a.user_agent_alias = 'Windows IE 9'
   a.verify_mode = OpenSSL::SSL::VERIFY_NONE
@@ -21,11 +28,15 @@ agent = Mechanize.new do |a|
   a.read_timeout = 180
   a.conditional_requests = false
 end
-page = agent.get("https://sys.biz.ne.jp/partner/")
+
+# スクレイピング対象サイト
+page = agent.get("https://xxxxxxxxxxxxxxxxxx")
 page = page.form_with(action: './index2.html') do |form|
-  form.id = ENV['ID']
+  form.id = ENV['ID'] # ログイン情報をENVにて実装
   form.pass = ENV['PS']
 end.submit
+
+# 条件のエリア設定
 def request_area(area)
   if area.include?("東京都")
     true
@@ -45,6 +56,8 @@ def request_area(area)
     false
   end
 end
+
+# 条件の予算設定
 def confirmation_budget(budget)
   if budget.include?("総額予算")
     if budget.include?("相場が分らない")
@@ -98,7 +111,6 @@ end
 # 既に条件不一致がわかっている案件のスルー初期変数設定
 false_id = []
 false_id_count = 0
-
 through_number = 0
 submit_finished = false
 current_loop = 0 # 現在のループ数
@@ -119,11 +131,12 @@ while current_loop < number_of_loops do
   number_throughs = 0
   number_successes = 0
   exception_handling = 0
-  list_page = 'https://sys.biz.ne.jp/partner/inq_lump/list.html'
+  list_page = 'https://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
   list_page = agent.get(list_page)
   list_page.encoding = 'eucJP-MS'
   while matter_number <= 9 do
     begin
+      # Webページ上の表示情報を変数へ代入
       matter_list = list_page.search('.sj_limit')[matter_number].text
       matter_type = list_page.search('.sj_flow')[matter_number].text
       matter_link = list_page.search('.sj_detail h4 a')[matter_number]
@@ -132,10 +145,10 @@ while current_loop < number_of_loops do
       matter_desc = list_page.search('.sj_info2')[matter_number].text
       matter_id = list_page.search('.lump_tid')[matter_number].text
       matter_id = matter_id.gsub(/[^\d]/, "").to_i
-#      binding.pry
       if matter_type.include?("ホームページ") && request_area(matter_area)
         unless matter_list.include?("参加枠なし") || matter_list.include?("終了") || matter_list.include?("メッセージ履歴") || matter_list.include?("参加希望申請中")
           unless false_id.include?(matter_id)
+            # 条件に合致するものだけ2段階目の処理へ移行
             puts "#{Time.now} 2nd page scraping..."
             puts "title : #{matter_title}"
             puts "---------------------------------------------------------"
@@ -147,11 +160,12 @@ while current_loop < number_of_loops do
               last_page = case_details.form_with(action: 'toiawase_conf.html') do |form|
                 form.field_with(name: 'flg').value = '0'
               end.submit
+              # 条件に合致するものだけ最終処理へ移行
               puts "#{Time.now} Final page scraping..."
               last_page.encoding = 'eucJP-MS'
               finish_page = last_page.form_with(action: 'toiawase_comp.html') do |form|
                 form.field_with(name: 'select_txt').value = '0'
-                form.field_with(name: 'mail_text').value = "はじめまして。AsianStream株式会社と申します。ぜひご提案に参加させて頂けますと幸いです。"
+                form.field_with(name: 'mail_text').value = "ここに案件参加時のコメントを入力します。"
               end.submit
               submit_finished = true
               number_successes += 1
@@ -176,6 +190,7 @@ while current_loop < number_of_loops do
         number_throughs += 1
         submit_finished = false
       end
+    # ロジック途中でエラーが発生した場合の例外処理
     rescue => e
       matter_number += 1
       exception_handling += 1
@@ -186,7 +201,7 @@ while current_loop < number_of_loops do
     end
   end
 
-  # プログラムのスリープ条件分岐
+  # プログラムのスリープ条件分岐（相手サーバーへの負荷軽減）
   if short_time.include?(current_loop)
     short_stop = rand(1..10)
     puts "#{Time.now} Short stop. #{short_stop}"
@@ -218,3 +233,5 @@ colapsed_time = end_time - start_time
 puts "#{Time.now} All time:#{colapsed_time}sec"
 puts "#{Time.now} End time #{end_time}"
 
+# binding.pry 問題起きたとき用の調査ツール
+# 実運用時はcronを使用し定時実行＆ログファイルを残す
