@@ -30,7 +30,7 @@ agent = Mechanize.new do |a|
 end
 
 # スクレイピング対象サイト
-page = agent.get("https://xxxxxxxxxxxxxxxxxx")
+page = agent.get(ENV['URL1'])
 page = page.form_with(action: './index2.html') do |form|
   form.id = ENV['ID'] # ログイン情報をENVにて実装
   form.pass = ENV['PS']
@@ -131,7 +131,7 @@ while current_loop < number_of_loops do
   number_throughs = 0
   number_successes = 0
   exception_handling = 0
-  list_page = 'https://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  list_page = ENV['URL2']
   list_page = agent.get(list_page)
   list_page.encoding = 'eucJP-MS'
   while matter_number <= 9 do
